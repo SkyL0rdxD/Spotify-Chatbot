@@ -3,8 +3,8 @@ from spotipy.oauth2 import SpotifyOAuth
 model_path = "/Users/skylerchanuwc/Library/Application Support/nomic.ai/GPT4All/Meta-Llama-3-8B-Instruct.Q4_0.gguf"
 from gpt4all import GPT4All
 gpt = GPT4All(model_path)
-CLIENT_ID = "3f2226e70fe04a778b0c81cb9c000b20"
-CLIENT_SECRET = "1577c2f4cf424784bfdec2a94f639687"
+CLIENT_ID = "clientid"
+CLIENT_SECRET = "clientsecret"
 REDIRECT_URI = "http://127.0.0.1:8888/callback"  # Loopback IP
 SCOPE = (
     "ugc-image-upload "
