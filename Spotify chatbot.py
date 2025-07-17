@@ -1,6 +1,6 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-model_path = "/Users/skylerchanuwc/Library/Application Support/nomic.ai/GPT4All/Meta-Llama-3-8B-Instruct.Q4_0.gguf"
+model_path = "filepath"
 from gpt4all import GPT4All
 gpt = GPT4All(model_path)
 CLIENT_ID = "clientid"
