@@ -5,10 +5,8 @@ from gpt4all import GPT4All
 # ---------------- CONFIGURATION ---------------- #
 model_path = "/Users/skylerchanuwc/Library/Application Support/nomic.ai/GPT4All/Meta-Llama-3-8B-Instruct.Q4_0.gguf"
 gpt = GPT4All(model_path)
-CLIENT_ID = "3f2226e70fe04a778b0c81cb9c000b20"
-CLIENT_SECRET = "1577c2f4cf424784bfdec2a94f639687"
-#CLIENT_ID = "YOUR_NEW_CLIENT_ID" 
-#CLIENT_SECRET = "YOUR_NEW_CLIENT_SECRET"
+CLIENT_ID = "clientid"
+CLIENT_SECRET = "clientsecret"
 REDIRECT_URI = "http://127.0.0.1:8888/callback"
 
 SCOPE = (
@@ -53,7 +51,22 @@ def get_all_spotify_data():
     data['playlists'] = [pl['name'] for pl in playlists]
 
     return data
+def create_playlist_on_spotify(song_list, playlist_name="AI Generated Playlist"):
+    user_id = sp.me()["id"]
+    playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=False)
+    playlist_id = playlist["id"]
 
+    track_uris = []
+    for song in song_list:
+        result = sp.search(q=song, type="track", limit=1)
+        if result['tracks']['items']:
+            track_uris.append(result['tracks']['items'][0]['uri'])
+
+    if track_uris:
+        sp.playlist_add_items(playlist_id, track_uris)
+        print(f"✅ Created playlist '{playlist_name}' with {len(track_uris)} tracks!")
+    else:
+        print("❌ Couldn't find any of the suggested songs on Spotify.")
 # ---------------- CHATBOT LOOP ---------------- #
 spotify_data = get_all_spotify_data()
 
@@ -86,7 +99,35 @@ while True:
     - If the question asks for top songs, use 'Top Tracks' list.
     - Respond naturally, like a friend talking.
     Respond conversationally.
+
+    If the user asks to create a playlist, output exactly in this format:
+    ACTION: create_playlist
+    PLAYLIST_NAME: (a nice playlist name)
+    SONGS:
+    - Song Name by Artist Name
+    - Song Name by Artist Name
+    (at least 10 songs)
     """
 
     response = gpt.generate(prompt)
     print("Bot:", response.strip())
+     
+    if "ACTION: create_playlist" in response:
+        # Extract playlist name
+        playlist_name = "AI Playlist"
+        if "PLAYLIST_NAME:" in response:
+            lines = response.splitlines()
+            for line in lines:
+                if line.startswith("PLAYLIST_NAME:"):
+                    playlist_name = line.replace("PLAYLIST_NAME:", "").strip()
+
+        # Extract song list
+        songs = []
+        if "SONGS:" in response:
+            parts = response.split("SONGS:")[1].strip().split("\n")
+            for line in parts:
+                if line.startswith("-"):
+                    songs.append(line.replace("-", "").strip())
+
+        if songs:
+            create_playlist_on_spotify(songs, playlist_name)
