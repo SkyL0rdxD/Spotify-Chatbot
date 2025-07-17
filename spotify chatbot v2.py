@@ -3,10 +3,10 @@ from spotipy.oauth2 import SpotifyOAuth
 from gpt4all import GPT4All
 
 # ---------------- CONFIGURATION ---------------- #
-model_path = "filepath"
+model_path = "/Users/skylerchanuwc/Library/Application Support/nomic.ai/GPT4All/Meta-Llama-3-8B-Instruct.Q4_0.gguf"
 gpt = GPT4All(model_path)
-CLIENT_ID = "clientid"
-CLIENT_SECRET = "clientsecret"
+CLIENT_ID = "3f2226e70fe04a778b0c81cb9c000b20"
+CLIENT_SECRET = "1577c2f4cf424784bfdec2a94f639687"
 REDIRECT_URI = "http://127.0.0.1:8888/callback"
 
 SCOPE = (
@@ -79,7 +79,7 @@ while True:
 
     # Build dynamic prompt for LLM
     prompt = f"""
-    You are a helpful music assistant that interprets a user's spotify data. Here is the user's Spotify data:
+    You are a helpful music chatbot that answers a user's questions which may require a user's spotify data. Here is the user's Spotify data:
 
     Recent Tracks: {spotify_data['recent_tracks']}
     Top Tracks: {spotify_data['top_tracks']}
@@ -88,25 +88,18 @@ while True:
 
     Question: {user_input}
 
-    Answer naturally based on the data.
-    - If user asks for top songs, mention them from the data.
-    - If user asks for recent songs, mention them from the data.
-    - If user asks for favorite artist, infer from top_artists.
-    - If user asks for recommendations, suggest related artists or songs.
-    - If user asks to create a playlist, list 10 songs you recommend.
-    - Do NOT explain how you formed the answer.
-    - Do NOT give instructions or examples.
-    - If the question asks for top songs, use 'Top Tracks' list.
-    - Respond naturally, like a friend talking.
-    Respond conversationally.
+    Answer naturally based on the data or general music knowledge if the question does not need spotify user data. Do NOT explain your reasoning. Do NOT include instructions or extra formatting. Keep it short. This is not training so never include text that is not directly an answer. 
 
-    If the user asks to create a playlist, output exactly in this format:
+
+    If the user explicitly asks to create a playlist, output exactly in this format:
     ACTION: create_playlist
     PLAYLIST_NAME: (a nice playlist name)
     SONGS:
     - Song Name by Artist Name
     - Song Name by Artist Name
     (at least 10 songs)
+
+    Never include playlist format if there is no request from the user. 
     """
 
     response = gpt.generate(prompt)
