@@ -1,20 +1,32 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from gpt4all import GPT4All
-
-# ---------------- CONFIGURATION ---------------- #
 model_path = "/Users/skylerchanuwc/Library/Application Support/nomic.ai/GPT4All/Meta-Llama-3-8B-Instruct.Q4_0.gguf"
+from gpt4all import GPT4All
 gpt = GPT4All(model_path)
 CLIENT_ID = "3f2226e70fe04a778b0c81cb9c000b20"
 CLIENT_SECRET = "1577c2f4cf424784bfdec2a94f639687"
-REDIRECT_URI = "http://127.0.0.1:8888/callback"
-
+REDIRECT_URI = "http://127.0.0.1:8888/callback"  # Loopback IP
 SCOPE = (
-    "user-read-playback-state user-modify-playback-state user-read-currently-playing "
-    "playlist-modify-public playlist-modify-private user-read-recently-played user-top-read "
-    "playlist-read-private playlist-read-collaborative"
+    "ugc-image-upload "
+    "user-read-playback-state "
+    "user-modify-playback-state "
+    "user-read-currently-playing "
+    "app-remote-control "
+    "streaming "
+    "playlist-read-private "
+    "playlist-read-collaborative "
+    "playlist-modify-private "
+    "playlist-modify-public "
+    "user-follow-modify "
+    "user-follow-read "
+    "user-read-playback-position "
+    "user-top-read "
+    "user-read-recently-played "
+    "user-library-modify "
+    "user-library-read "
+    "user-read-email "
+    "user-read-private"
 )
-
 # Spotify Auth
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
     client_id=CLIENT_ID,
@@ -70,7 +82,7 @@ def create_playlist_on_spotify(song_list, playlist_name="AI Generated Playlist")
 # ---------------- CHATBOT LOOP ---------------- #
 spotify_data = get_all_spotify_data()
 
-print("Spotify + GPT4All Chatbot is ready! Type 'exit' to quit.")
+print("Spotify + Chatbot is ready! Type 'exit' to quit.")
 while True:
     user_input = input("You: ")
     if user_input.lower() in ["exit", "quit"]:
@@ -79,7 +91,7 @@ while True:
 
     # Build dynamic prompt for LLM
     prompt = f"""
-    You are a helpful music chatbot that answers a user's questions which may require a user's spotify data. Here is the user's Spotify data:
+    You are a helpful music assistant that interprets a user's spotify data. Here is the user's Spotify data:
 
     Recent Tracks: {spotify_data['recent_tracks']}
     Top Tracks: {spotify_data['top_tracks']}
@@ -88,39 +100,18 @@ while True:
 
     Question: {user_input}
 
-    Answer naturally based on the data or general music knowledge if the question does not need spotify user data. Do NOT explain your reasoning. Do NOT include instructions or extra formatting. Keep it short. This is not training so never include text that is not directly an answer. 
-
-
-    If the user explicitly asks to create a playlist, output exactly in this format:
-    ACTION: create_playlist
-    PLAYLIST_NAME: (a nice playlist name)
-    SONGS:
-    - Song Name by Artist Name
-    - Song Name by Artist Name
-    (at least 10 songs)
-
-    Never include playlist format if there is no request from the user. 
+    Answer naturally based on the data.
+    - If user asks for top songs, mention them from the data.
+    - If user asks for recent songs, mention them from the data.
+    - If user asks for favorite artist, infer from top_artists.
+    - If user asks for recommendations, suggest related artists or songs.
+    - If user asks to create a playlist, list 10 songs you recommend.
+    - Do NOT explain how you formed the answer.
+    - Do NOT give instructions or examples.
+    - If the question asks for top songs, use 'Top Tracks' list.
+    - Respond naturally, like a friend talking.
+    Respond conversationally.
     """
 
     response = gpt.generate(prompt)
     print("Bot:", response.strip())
-     
-    if "ACTION: create_playlist" in response:
-        # Extract playlist name
-        playlist_name = "AI Playlist"
-        if "PLAYLIST_NAME:" in response:
-            lines = response.splitlines()
-            for line in lines:
-                if line.startswith("PLAYLIST_NAME:"):
-                    playlist_name = line.replace("PLAYLIST_NAME:", "").strip()
-
-        # Extract song list
-        songs = []
-        if "SONGS:" in response:
-            parts = response.split("SONGS:")[1].strip().split("\n")
-            for line in parts:
-                if line.startswith("-"):
-                    songs.append(line.replace("-", "").strip())
-
-        if songs:
-            create_playlist_on_spotify(songs, playlist_name)
