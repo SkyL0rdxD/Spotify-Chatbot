@@ -1,0 +1,121 @@
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+model_path = "/Users/skylerchanuwc/Library/Application Support/nomic.ai/GPT4All/Meta-Llama-3-8B-Instruct.Q4_0.gguf"
+from gpt4all import GPT4All
+gpt = GPT4All(model_path)
+CLIENT_ID = "3f2226e70fe04a778b0c81cb9c000b20"
+CLIENT_SECRET = "1577c2f4cf424784bfdec2a94f639687"
+REDIRECT_URI = "http://127.0.0.1:8888/callback"  # Loopback IP
+SCOPE = (
+    "ugc-image-upload "
+    "user-read-playback-state "
+    "user-modify-playback-state "
+    "user-read-currently-playing "
+    "app-remote-control "
+    "streaming "
+    "playlist-read-private "
+    "playlist-read-collaborative "
+    "playlist-modify-private "
+    "playlist-modify-public "
+    "user-follow-modify "
+    "user-follow-read "
+    "user-read-playback-position "
+    "user-top-read "
+    "user-read-recently-played "
+    "user-library-modify "
+    "user-library-read "
+    "user-read-email "
+    "user-read-private"
+)
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET,
+    redirect_uri=REDIRECT_URI,
+    scope=SCOPE,
+    cache_path="spotify_token.json"
+))
+def get_intent(user_input):
+    prompt = f"""
+    Classify the question into one of:
+    - recent_songs
+    - top_artists
+    - top_songs
+    If it's not related to spotify, respond naturally as a chatbot.
+    User question: {user_input}
+    Intent:
+    """
+    with gpt.chat_session():
+        response = gpt.generate(prompt)
+    return response.strip().lower()
+
+def format_recent_tracks(limit=10):
+    recent_tracks = [
+        f"{item['track']['name']} by {item['track']['artists'][0]['name']}"
+        for item in sp.current_user_recently_played(limit=limit)['items']
+    ]
+    return "Recent Tracks:\n" + "\n".join([f"- {track}" for track in recent_tracks]) + "\n"
+
+# Function to fetch and format top tracks
+def format_top_tracks(limit=10):
+    top_tracks = [
+        f"{track['name']} by {track['artists'][0]['name']}"
+        for track in sp.current_user_top_tracks(limit=limit)['items']
+    ]
+    return "Top Tracks:\n" + "\n".join([f"- {track}" for track in top_tracks]) + "\n"
+
+# Function to fetch and format top artists
+def format_top_artists(limit=10):
+    top_artists = [
+        artist['name'] for artist in sp.current_user_top_artists(limit=limit)['items']
+    ]
+    return "Top Artists:\n" + "\n".join([f"- {artist}" for artist in top_artists]) + "\n"
+
+# Function to fetch and format playlists
+def format_playlists(limit=5):
+    playlists = [pl['name'] for pl in sp.current_user_playlists(limit=limit)['items']]
+    return "Playlists:\n" + "\n".join([f"- {pl}" for pl in playlists]) + "\n"
+
+
+def answer_question(intent, user_input):
+    if "recent" in intent:
+        recenttracks = format_recent_tracks()
+        prompt = f"""
+        You are a chatbot that interprets spotify data. Use only the available user Spotify data to answer the user's question.
+        Recent tracks: {recenttracks}
+        User Question: {user_input}
+        """
+        with gpt.chat_session():
+            response = gpt.generate(prompt)
+        return response.strip()
+    elif "top_artists" in intent:
+        topartists = format_top_artists()
+        prompt = f"""
+        You are a chatbot that interprets spotify data. Use only the available user Spotify data to answer the user's question.
+        Top artists: {topartists}
+        User Question: {user_input}
+        """
+        with gpt.chat_session():
+            response = gpt.generate(prompt)
+        return response.strip()
+
+    elif "top_songs" in intent:
+        topsongs = format_top_tracks()
+        prompt = f"""
+        You are a chatbot that interprets spotify data. Use only the available user Spotify data to answer the user's question.
+        Top songs: {topsongs}
+        User Question: {user_input}
+        """
+        with gpt.chat_session():
+            response = gpt.generate(prompt)
+        return response.strip()
+    else:
+        return gpt.generate(f"User: {user_input}\nBot:")
+print("Spotify Chatbot is ready! Type 'exit' to quit.")
+while True:
+    user_input = input("You: ") 
+    if user_input.lower() in ["exit", "quit"]:
+        print("Bot: Goodbye!")
+        break
+    intent = get_intent(user_input)
+    response = answer_question(intent, user_input)
+    print("Bot:", response)
